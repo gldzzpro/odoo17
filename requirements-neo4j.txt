@@ -1,0 +1,8 @@
+# Neo4j FastAPI Microservice Dependencies
+fastapi>=0.95.0
+uvicorn>=0.22.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+neo4j==4.4.12  # Compatible with existing Neo4jLoader implementation
+loguru>=0.7.0  # Better logging
+python-multipart>=0.0.6  # For form data parsing

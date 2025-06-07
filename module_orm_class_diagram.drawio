@@ -1,0 +1,135 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" version="27.1.1">
+  <diagram name="Module ORM Classes" id="module-orm-diagram">
+    <mxGraphModel dx="976" dy="1921" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ModuleCategory" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleCategory&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;_name: ir.module.category&lt;br/&gt;_table: ir_module_category&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ id: Integer (PK)&lt;br/&gt;+ name: Char&lt;br/&gt;+ parent_id: Many2one&lt;br/&gt;+ description: Text&lt;br/&gt;+ sequence: Integer&lt;br/&gt;+ visible: Boolean&lt;br/&gt;+ exclusive: Boolean&lt;br/&gt;+ xml_id: Char&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ _compute_xml_id()&lt;br/&gt;+ _check_parent_not_circular()&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" parent="1" vertex="1">
+          <mxGeometry x="80" y="-60" width="200" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="Module" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Module&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;_name: ir.module.module&lt;br/&gt;_table: ir_module_module&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ id: Integer (PK)&lt;br/&gt;+ name: Char&lt;br/&gt;+ category_id: Many2one&lt;br/&gt;+ shortdesc: Char&lt;br/&gt;+ summary: Char&lt;br/&gt;+ description: Text&lt;br/&gt;+ author: Char&lt;br/&gt;+ website: Char&lt;br/&gt;+ state: Selection&lt;br/&gt;+ auto_install: Boolean&lt;br/&gt;+ demo: Boolean&lt;br/&gt;+ license: Selection&lt;br/&gt;+ application: Boolean&lt;br/&gt;+ sequence: Integer&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ get_module_info()&lt;br/&gt;+ button_install()&lt;br/&gt;+ button_uninstall()&lt;br/&gt;+ module_uninstall()&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="400" y="80" width="200" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="ModuleDependency" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleDependency&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;_name: ir.module.module.dependency&lt;br/&gt;_table: ir_module_module_dependency&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ id: Integer (PK)&lt;br/&gt;+ name: Char&lt;br/&gt;+ module_id: Many2one&lt;br/&gt;+ depend_id: Many2one&lt;br/&gt;+ state: Selection&lt;br/&gt;+ auto_install_required: Boolean&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ _compute_depend()&lt;br/&gt;+ _search_depend()&lt;br/&gt;+ _compute_state()&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="60" y="270" width="200" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="ModuleExclusion" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleExclusion&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;_name: ir.module.module.exclusion&lt;br/&gt;_table: ir_module_module_exclusion&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ id: Integer (PK)&lt;br/&gt;+ name: Char&lt;br/&gt;+ module_id: Many2one&lt;br/&gt;+ exclusion_id: Many2one&lt;br/&gt;+ state: Selection&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ _compute_exclusion()&lt;br/&gt;+ _search_exclusion()&lt;br/&gt;+ _compute_state()&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="400" y="425" width="200" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="ExtendedModule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Module (Extended)&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;_inherit: ir.module.module&lt;br/&gt;_inherit: graph.builder.mixin&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;(inherits all base fields)&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ get_module_graph()&lt;br/&gt;+ get_reverse_dependency_graph()&lt;br/&gt;+ get_category_module_graph()&lt;br/&gt;+ get_reverse_category_module_graph()&lt;br/&gt;+ _get_module_dependencies()&lt;br/&gt;+ _get_module_exclusions()&lt;br/&gt;+ _create_module_node()&lt;br/&gt;+ _should_stop_graph_traversal()&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;fillColor=none;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="690" y="120" width="220" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="category_self" value="" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;" parent="1" source="ModuleCategory" target="ModuleCategory" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="150" y="50" as="sourcePoint" />
+            <mxPoint x="50" y="100" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="30" y="140" />
+              <mxPoint x="30" y="100" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="category_self_label" value="parent_id" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;" parent="category_self" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-1" value="0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="category_self">
+          <mxGeometry x="0.9059" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-3" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="category_self">
+          <mxGeometry x="-0.8674" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="category_to_module" value="" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;entryX=0.622;entryY=-0.002;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ModuleCategory" target="Module" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="category_to_module_label" value="category_id" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;" parent="category_to_module" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-4" value="0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="category_to_module">
+          <mxGeometry x="-0.806" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-5" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="category_to_module">
+          <mxGeometry x="0.9268" y="2" relative="1" as="geometry">
+            <mxPoint x="-6" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_to_dependency" value="" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;" parent="1" source="Module" target="ModuleDependency" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="module_to_dependency_label" value="dependencies_id" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;" parent="module_to_dependency" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="5" y="15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-6" value="*&lt;div&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontStyle=1;fontSize=25;spacing=0;" vertex="1" connectable="0" parent="module_to_dependency">
+          <mxGeometry x="-0.9374" relative="1" as="geometry">
+            <mxPoint x="-15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-7" value="0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="module_to_dependency">
+          <mxGeometry x="0.9478" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_to_exclusion" value="" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;" parent="1" source="Module" target="ModuleExclusion" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dependency_to_module" value="" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;" parent="1" source="ModuleDependency" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="250" y="480" as="sourcePoint" />
+            <mxPoint x="399" y="350" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="160" y="480" />
+              <mxPoint x="360" y="480" />
+              <mxPoint x="360" y="350" />
+              <mxPoint x="399" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dependency_to_module_label" value="depend_id" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;" parent="dependency_to_module" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-8" value="0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="dependency_to_module">
+          <mxGeometry x="-0.8859" y="2" relative="1" as="geometry">
+            <mxPoint x="-2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-9" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="dependency_to_module">
+          <mxGeometry x="0.9087" y="-3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="exclusion_to_module" value="" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;" parent="1" source="ModuleExclusion" target="Module" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="400" as="sourcePoint" />
+            <mxPoint x="450" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="exclusion_to_module_label" value="exclusion_id" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;" parent="exclusion_to_module" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-10" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="exclusion_to_module">
+          <mxGeometry x="0.5077" y="-1" relative="1" as="geometry">
+            <mxPoint x="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hGOgVX5_NZ6iJPZ1DaTK-11" value="0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="exclusion_to_module">
+          <mxGeometry x="-0.5077" y="-1" relative="1" as="geometry">
+            <mxPoint x="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="inheritance" value="" style="endArrow=block;endSize=16;endFill=0;html=1;edgeStyle=orthogonalEdgeStyle;entryX=0.995;entryY=0.554;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ExtendedModule" target="Module" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inheritance_label" value="extends" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;" parent="inheritance" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

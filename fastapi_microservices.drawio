@@ -1,0 +1,101 @@
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="5.0" etag="" version="" type="device">
+  <diagram name="FastAPI Microservices" id="fastapi-microservices">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Actors -->
+        <mxCell id="actor-sys-admin" value="System Admin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="50" y="150" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-ext-system" value="External System" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="50" y="300" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-monitor" value="Monitoring Tool" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="50" y="450" width="30" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Graph Sync Service -->
+        <mxCell id="graph-sync" value="Graph Sync Service" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;" vertex="1" parent="1">
+          <mxGeometry x="200" y="50" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-fetch-dep" value="Fetch Module Dependencies" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="graph-sync">
+          <mxGeometry x="10" y="30" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-health-check1" value="Health Check" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="graph-sync">
+          <mxGeometry x="90" y="30" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-trigger-collection" value="Trigger Data Collection" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="graph-sync">
+          <mxGeometry x="170" y="30" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-configure-instances" value="Configure Instances" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="graph-sync">
+          <mxGeometry x="10" y="80" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-make-rpc" value="Make JSON-RPC Calls" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="graph-sync">
+          <mxGeometry x="90" y="80" width="70" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Neo4j Sync Service -->
+        <mxCell id="neo4j-sync" value="Neo4j Sync Service" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;" vertex="1" parent="1">
+          <mxGeometry x="200" y="250" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-ingest-data" value="Ingest Module Data" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="neo4j-sync">
+          <mxGeometry x="10" y="30" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-health-check2" value="Health Check" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="neo4j-sync">
+          <mxGeometry x="90" y="30" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-detect-circular" value="Detect Circular Dependencies" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="neo4j-sync">
+          <mxGeometry x="170" y="30" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-create-schema" value="Create Neo4j Schema" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="neo4j-sync">
+          <mxGeometry x="10" y="80" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-run-cypher" value="Run Cypher Queries" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="neo4j-sync">
+          <mxGeometry x="90" y="80" width="70" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Neo4j Database -->
+        <mxCell id="neo4j-db" value="Neo4j Database" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;" vertex="1" parent="1">
+          <mxGeometry x="500" y="300" width="150" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Connections -->
+        <mxCell id="conn1" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="actor-sys-admin" target="uc-configure-instances">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="180" as="sourcePoint" />
+            <mxPoint x="250" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="conn2" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="actor-ext-system" target="uc-fetch-dep">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="330" as="sourcePoint" />
+            <mxPoint x="250" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="conn3" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="actor-monitor" target="uc-health-check1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="480" as="sourcePoint" />
+            <mxPoint x="320" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Service interactions -->
+        <mxCell id="service-conn1" value="sends data to" style="endArrow=open;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="uc-fetch-dep" target="uc-ingest-data">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="250" y="100" as="sourcePoint" />
+            <mxPoint x="250" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="service-conn2" value="stores in" style="endArrow=open;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="uc-ingest-data" target="neo4j-db">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="280" y="300" as="sourcePoint" />
+            <mxPoint x="500" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

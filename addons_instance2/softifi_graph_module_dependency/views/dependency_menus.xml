@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Client action for module graph -->
+        <record id="module_graph_action" model="ir.actions.client">
+            <field name="name">Module Graph</field>
+            <field name="tag">module_graph</field>
+            <field name="target">main</field>
+        </record>
+
+        <!-- Client action for model graph -->
+        <record id="model_graph_action" model="ir.actions.client">
+            <field name="name">Model Graph</field>
+            <field name="tag">model_graph</field>
+            <field name="target">main</field>
+        </record>
+
+        <!-- Main menu for all dependency graphs -->
+        <menuitem id="menu_dependency_graphs"
+            name="Dependency Graphs"
+            parent="base.menu_management"
+            sequence="100" />
+
+        <!-- Module graph menu under the main dependency graphs menu -->
+        <menuitem id="menu_module_graph"
+            name="Module Graph"
+            parent="menu_dependency_graphs"
+            sequence="10"
+            action="module_graph_action" />
+
+        <!-- Model graph menu under the main dependency graphs menu -->
+        <menuitem id="menu_model_graph"
+            name="Model Graph"
+            parent="menu_dependency_graphs"
+            sequence="20"
+            action="model_graph_action" />
+    </data>
+</odoo>

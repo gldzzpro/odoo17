@@ -105,7 +105,8 @@ jobs:
           
           # Create email content
           SUBJECT="Odoo CI/CD: $STATUS - Branch ${{ github.ref_name }}"
-          BODY="Odoo CI/CD Pipeline Results
+          BODY=$(cat <<EOF
+Odoo CI/CD Pipeline Results
 
 Status: $STATUS
 Branch: ${{ github.ref_name }}
@@ -116,7 +117,9 @@ Run: ${{ github.run_number }}
 
 Details: $DETAILS
 
-View full logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+View full logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+EOF
+)
           
           # Send email using the Python script
           python3 scripts/send_email.py "$SUBJECT" "$BODY" "golden.farhat@gmail.com"

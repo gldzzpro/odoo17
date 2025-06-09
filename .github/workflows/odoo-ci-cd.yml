@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
-      - 'branch/*'
+      - 'branch-*'
   pull_request:
     branches:
       - main
-      - 'branch/*'
+      - 'branch-*'
 
 env:
   POSTGRES_PASSWORD: postgres_admin

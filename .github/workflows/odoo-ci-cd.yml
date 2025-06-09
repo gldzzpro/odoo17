@@ -101,9 +101,9 @@ jobs:
 
       - name: Start Odoo service
         run: |
-          docker-compose -f docker-compose.ci.yml up -d postgres
-          timeout 60 bash -c 'until docker-compose -f docker-compose.ci.yml exec -T postgres pg_isready -U postgres; do sleep 2; done'
-          docker-compose -f docker-compose.ci.yml up -d odoo${{ matrix.instance }}
+          docker compose -f docker-compose.ci.yml up -d postgres
+          timeout 60 bash -c 'until docker compose -f docker-compose.ci.yml exec -T postgres pg_isready -U postgres; do sleep 2; done'
+          docker compose -f docker-compose.ci.yml up -d odoo${{ matrix.instance }}
 
       - name: Run Odoo module tests
         run: |
@@ -111,7 +111,7 @@ jobs:
           MODULES=$(find addons_instance$INSTANCE -name '__manifest__.py' -exec dirname {} \; | xargs -I {} basename {})
           for m in $MODULES; do
             echo "Running tests for module $m in instance $INSTANCE"
-            docker-compose -f docker-compose.ci.yml exec -T odoo$INSTANCE odoo-bin \
+            docker compose -f docker-compose.ci.yml exec -T odoo$INSTANCE odoo-bin \
               --test-enable --stop-after-init --database=odoo_db$INSTANCE --update=$m --log-level=test || echo "Tests failed for $m"
           done
 

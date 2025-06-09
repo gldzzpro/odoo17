@@ -1,0 +1,31 @@
+odoo${i}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >-
+      -- --db_host=postgres
+         --db_port=5432
+         --db_user=odoo${i}
+         --db_password=odoo${i}_pass
+         --database=odoo_db${i}
+         -i base,softifi_graph_module_dependency
+         --http-interface=0.0.0.0
+         --proxy-mode
+         --test-enable
+         --stop-after-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8069:8069"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=odoo${i}
+      - DB_PASSWORD=odoo${i}_pass
+      - DB_NAME=odoo_db${i}
+    volumes:
+      - ./addons_instance${i}:/mnt/extra-addons:ro
+      - ./addons:/mnt/base-addons:ro
+    networks:
+      - odoo_network

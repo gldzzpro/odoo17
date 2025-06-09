@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - main
-      - branch-a
-      - branch-b
+      - 'branch/*'
   pull_request:
     branches:
       - main
-      - branch-a
-      - branch-b
+      - 'branch/*'
 
 env:
   POSTGRES_PASSWORD: postgres_admin
@@ -24,50 +22,30 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      instance1-changed: ${{ steps.changes.outputs.instance1 }}
-      instance2-changed: ${{ steps.changes.outputs.instance2 }}
-      base-changed: ${{ steps.changes.outputs.base }}
-      branch-type: ${{ steps.branch-info.outputs.branch-type }}
+      instances: ${{ steps.detect.outputs.instances }}
+      base-changed: ${{ steps.filter.outputs.base }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Detect instances and changes
+        id: detect
         run: |
-          git config --global user.email "golden.farhat@gmail.com"
-          git config --global user.name "GldzzPro"
+          echo "Detecting changed instances..."
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "$CHANGED"
 
-      - name: Detect branch type and changes
-        id: branch-info
-        run: |
-          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          echo "Current branch: $BRANCH_NAME"
-          
-          if [[ "$BRANCH_NAME" == "branch-a" ]]; then
-            echo "branch-type=instance1" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH_NAME" == "branch-b" ]]; then
-            echo "branch-type=instance2" >> $GITHUB_OUTPUT
-          else
-            echo "branch-type=main" >> $GITHUB_OUTPUT
-          fi
+          INSTANCES=$(echo "$CHANGED" | grep '^addons_instance' | cut -d/ -f1 | sort -u | sed 's/addons_instance//' | jq -R -s -c 'split("\n") | map(select(. != ""))')
+          echo "Detected instances: $INSTANCES"
+          echo "instances=$INSTANCES" >> $GITHUB_OUTPUT
 
-      - name: Check for changes
-        id: changes
+      - name: Detect base changes
+        id: filter
         uses: dorny/paths-filter@v2
         with:
           filters: |
-            instance1:
-              - 'addons_instance1/**'
-              - 'docker-compose.yml'
-              - 'Dockerfile'
-              - 'entrypoint.sh'
-            instance2:
-              - 'addons_instance2/**'
-              - 'docker-compose.yml'
-              - 'Dockerfile'
-              - 'entrypoint.sh'
             base:
               - 'addons/**'
               - 'odoo/**'
@@ -77,172 +55,43 @@ jobs:
   generate-config:
     needs: detect-changes
     runs-on: ubuntu-latest
-    if: needs.detect-changes.outputs.instance1-changed == 'true' || needs.detect-changes.outputs.instance2-changed == 'true' || needs.detect-changes.outputs.base-changed == 'true'
+    if: ${{ needs.detect-changes.outputs.instances != '[]' || needs.detect-changes.outputs.base-changed == 'true' }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate dynamic docker-compose.yml
+      - name: Generate docker-compose config
         run: |
-          # Create dynamic docker-compose based on branch
-          BRANCH_TYPE="${{ needs.detect-changes.outputs.branch-type }}"
-          
-          cat > docker-compose.ci.yml << EOF
-          services:
-            postgres:
-              image: postgres:15
-              restart: always
-              environment:
-                POSTGRES_DB: postgres
-                POSTGRES_USER: postgres
-                POSTGRES_PASSWORD: postgres_admin
-                POSTGRES_MULTIPLE_DATABASES: odoo_db1,odoo_db2
-                POSTGRES_MULTIPLE_USERS: odoo1:odoo1_pass,odoo2:odoo2_pass
-              volumes:
-                - postgres-data:/var/lib/postgresql/data
-                - ./init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
-              networks:
-                - odoo_network
-              ports:
-                - "5432:5432"
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U postgres"]
-                interval: 10s
-                timeout: 5s
-                retries: 5
-          
-            odoo1:
-              build:
-                context: .
-                dockerfile: Dockerfile
-              command: -- --db_host=postgres --db_port=5432 --db_user=odoo1 --db_password=odoo1_pass --database=odoo_db1 -i base,softifi_graph_module_dependency --http-interface=0.0.0.0 --proxy-mode --test-enable --stop-after-init
-              depends_on:
-                postgres:
-                  condition: service_healthy
-              ports:
-                - "8070:8069"
-              environment:
-                - DB_HOST=postgres
-                - DB_PORT=5432
-                - DB_USER=odoo1
-                - DB_PASSWORD=odoo1_pass
-                - DB_NAME=odoo_db1
-              volumes:
-                - ./addons_instance1:/mnt/extra-addons:ro
-                - ./addons:/mnt/base-addons:ro
-                - odoo1-data:/var/lib/odoo
-              networks:
-                - odoo_network
-          
-            odoo2:
-              build:
-                context: .
-                dockerfile: Dockerfile
-              command: -- --db_host=postgres --db_port=5432 --db_user=odoo2 --db_password=odoo2_pass --database=odoo_db2 -i base,softifi_graph_module_dependency --http-interface=0.0.0.0 --proxy-mode --test-enable --stop-after-init
-              depends_on:
-                postgres:
-                  condition: service_healthy
-              ports:
-                - "8069:8069"
-              environment:
-                - DB_HOST=postgres
-                - DB_PORT=5432
-                - DB_USER=odoo2
-                - DB_PASSWORD=odoo2_pass
-                - DB_NAME=odoo_db2
-              volumes:
-                - ./addons_instance2:/mnt/extra-addons:ro
-                - ./addons:/mnt/base-addons:ro
-                - odoo2-data:/var/lib/odoo
-              networks:
-                - odoo_network
-          
-            graphsync:
-              build:
-                context: ./graph_sync
-                dockerfile: Dockerfile
-              ports:
-                - "8000:8000"
-              environment:
-                - ODOO_INSTANCES=http://odoo1:8069,http://odoo2:8069
-              depends_on:
-                - odoo1
-                - odoo2
-              networks:
-                - odoo_network
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:8000/healthcheck"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 5s
-          
-          networks:
-            odoo_network:
-              driver: bridge
-          
-          volumes:
-            postgres-data:
-            odoo1-data:
-            odoo2-data:
-          EOF
+          INSTANCES=$(echo '${{ needs.detect-changes.outputs.instances }}' | jq -r '.[]')
 
-      - name: Generate graph_sync config.yml
-        run: |
-          mkdir -p config
-          cat > config/config.yml << EOF
-          odoo_instances:
-            - name: "instance1"
-              url: "http://odoo1:8069"
-              database: "odoo_db1"
-              username: "admin"
-              password: "admin"
-            - name: "instance2"
-              url: "http://odoo2:8069"
-              database: "odoo_db2"
-              username: "admin"
-              password: "admin"
-          
-          neo4j:
-            uri: "${{ env.NEO4J_URI }}"
-            username: "${{ env.NEO4J_USERNAME }}"
-            password: "${{ env.NEO4J_PASSWORD }}"
-          
-          sync_settings:
-            batch_size: 100
-            timeout: 30
-            retry_attempts: 3
-          
-          dependency_analysis:
-            detect_cycles: true
-            max_depth: 10
-            exclude_modules:
-              - "base"
-              - "web"
-          EOF
+          cp .ci-templates/base.yml docker-compose.ci.yml
+          for i in $INSTANCES; do
+            envsubst "${i}" < .ci-templates/odoo-instance.yml >> docker-compose.ci.yml
+          done
+          echo 'networks:\n  odoo_network:\n    driver: bridge' >> docker-compose.ci.yml
+          echo 'volumes:\n  postgres-data:' >> docker-compose.ci.yml
+          for i in $INSTANCES; do
+            echo "  odoo${i}-data:" >> docker-compose.ci.yml
+          done
 
-      - name: Upload generated configs
+      - name: Upload configs
         uses: actions/upload-artifact@v4
         with:
           name: generated-configs
-          path: |
-            docker-compose.ci.yml
-            config/config.yml
+          path: docker-compose.ci.yml
 
   test-odoo-modules:
     needs: [detect-changes, generate-config]
     runs-on: ubuntu-latest
-    if: needs.detect-changes.outputs.instance1-changed == 'true' || needs.detect-changes.outputs.instance2-changed == 'true' || needs.detect-changes.outputs.base-changed == 'true'
-    
+    if: ${{ needs.detect-changes.outputs.instances != '[]' || needs.detect-changes.outputs.base-changed == 'true' }}
     strategy:
       matrix:
-        instance: [1, 2]
-        
+        instance: ${{ fromJson(needs.detect-changes.outputs.instances) }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download generated configs
+      - name: Download configs
         uses: actions/download-artifact@v4
         with:
           name: generated-configs
@@ -250,216 +99,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and start services
+      - name: Start Odoo service
         run: |
-          # Start services using generated docker-compose
           docker-compose -f docker-compose.ci.yml up -d postgres
-          
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL to be ready..."
           timeout 60 bash -c 'until docker-compose -f docker-compose.ci.yml exec -T postgres pg_isready -U postgres; do sleep 2; done'
-          
-          # Start Odoo instance
           docker-compose -f docker-compose.ci.yml up -d odoo${{ matrix.instance }}
-          
-          # Wait for Odoo to be ready
-          echo "Waiting for Odoo instance ${{ matrix.instance }} to be ready..."
-          timeout 300 bash -c 'until curl -f http://localhost:807${{ matrix.instance }}/web/health 2>/dev/null; do sleep 5; done'
 
       - name: Run Odoo module tests
         run: |
-          # Run tests for custom modules
-          INSTANCE_NUM=${{ matrix.instance }}
-          PORT=$((8069 + INSTANCE_NUM - 1))
-          
-          echo "Running tests for Odoo instance $INSTANCE_NUM on port $PORT"
-          
-          # Get list of custom modules
-          CUSTOM_MODULES=$(find addons_instance$INSTANCE_NUM -name '__manifest__.py' -exec dirname {} \; | xargs -I {} basename {})
-          
-          for module in $CUSTOM_MODULES; do
-            echo "Testing module: $module"
-            docker-compose -f docker-compose.ci.yml exec -T odoo$INSTANCE_NUM odoo-bin \
-              --test-enable \
-              --stop-after-init \
-              --database=odoo_db$INSTANCE_NUM \
-              --update=$module \
-              --log-level=test || echo "Tests failed for $module"
+          INSTANCE=${{ matrix.instance }}
+          MODULES=$(find addons_instance$INSTANCE -name '__manifest__.py' -exec dirname {} \; | xargs -I {} basename {})
+          for m in $MODULES; do
+            echo "Running tests for module $m in instance $INSTANCE"
+            docker-compose -f docker-compose.ci.yml exec -T odoo$INSTANCE odoo-bin \
+              --test-enable --stop-after-init --database=odoo_db$INSTANCE --update=$m --log-level=test || echo "Tests failed for $m"
           done
 
-      - name: Check service health
-        run: |
-          # Check if services are healthy
-          docker-compose -f docker-compose.ci.yml ps
-          
-          # Check logs for errors
-          echo "=== Odoo${{ matrix.instance }} Logs ==="
-          docker-compose -f docker-compose.ci.yml logs odoo${{ matrix.instance }} | tail -50
-
       - name: Cleanup
         if: always()
         run: |
           docker-compose -f docker-compose.ci.yml down -v
           docker system prune -f
-
-  dependency-analysis:
-    needs: [detect-changes, generate-config, test-odoo-modules]
-    runs-on: ubuntu-latest
-    if: needs.detect-changes.outputs.instance1-changed == 'true' || needs.detect-changes.outputs.instance2-changed == 'true'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download generated configs
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-configs
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Start full environment
-        run: |
-          # Start all services for dependency analysis
-          docker-compose -f docker-compose.ci.yml up -d
-          
-          # Wait for all services to be ready
-          echo "Waiting for services to be ready..."
-          timeout 300 bash -c 'until curl -f http://localhost:8070/web/health && curl -f http://localhost:8069/web/health; do sleep 10; done'
-          timeout 60 bash -c 'until curl -f http://localhost:8000/healthcheck; do sleep 5; done'
-
-      - name: Run dependency cycle detection
-        id: dependency-check
-        run: |
-          echo "Starting dependency analysis..."
-          
-          # Trigger graph sync and dependency analysis
-          RESPONSE=$(curl -s -X POST http://localhost:8000/sync-all || echo "sync_failed")
-          echo "Sync response: $RESPONSE"
-          
-          # Check for dependency cycles
-          CYCLES=$(curl -s http://localhost:8000/analyze-dependencies || echo "analysis_failed")
-          echo "Dependency analysis: $CYCLES"
-          
-          # Save results
-          echo "$CYCLES" > dependency-analysis.json
-          
-          # Check if cycles were detected
-          if echo "$CYCLES" | grep -q '"cycles_detected":true'; then
-            echo "dependency-cycles=true" >> $GITHUB_OUTPUT
-            echo "DEPENDENCY_CYCLES_DETECTED=true" >> $GITHUB_ENV
-          else
-            echo "dependency-cycles=false" >> $GITHUB_OUTPUT
-            echo "DEPENDENCY_CYCLES_DETECTED=false" >> $GITHUB_ENV
-          fi
-
-      - name: Upload dependency analysis results
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-analysis-results
-          path: dependency-analysis.json
-
-      - name: Comment on PR with dependency analysis
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            
-            let analysisContent = 'Dependency analysis completed.';
-            
-            try {
-              const analysis = JSON.parse(fs.readFileSync('dependency-analysis.json', 'utf8'));
-              
-              if (analysis.cycles_detected) {
-                analysisContent = `⚠️ **Dependency Cycles Detected!**\n\n`;
-                analysisContent += `Found ${analysis.cycles.length} dependency cycle(s):\n\n`;
-                
-                analysis.cycles.forEach((cycle, index) => {
-                  analysisContent += `**Cycle ${index + 1}:** ${cycle.modules.join(' → ')}\n`;
-                });
-                
-                analysisContent += `\n🔧 Please review and resolve these dependency cycles before merging.`;
-              } else {
-                analysisContent = `✅ **No Dependency Cycles Detected**\n\nAll module dependencies are properly structured.`;
-              }
-            } catch (error) {
-              analysisContent = `❌ **Dependency Analysis Failed**\n\nError: ${error.message}`;
-            }
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: analysisContent
-            });
-
-      - name: Fail if dependency cycles detected
-        if: steps.dependency-check.outputs.dependency-cycles == 'true'
-        run: |
-          echo "❌ Dependency cycles detected! Please resolve before merging."
-          exit 1
-
-      - name: Cleanup
-        if: always()
-        run: |
-          docker-compose -f docker-compose.ci.yml down -v
-          docker system prune -f
-
-  notify:
-    needs: [detect-changes, test-odoo-modules, dependency-analysis]
-    runs-on: ubuntu-latest
-    if: always() && (needs.detect-changes.outputs.instance1-changed == 'true' || needs.detect-changes.outputs.instance2-changed == 'true')
-    
-    steps:
-      - name: Download dependency analysis results
-        if: needs.dependency-analysis.result != 'skipped'
-        uses: actions/download-artifact@v4
-        with:
-          name: dependency-analysis-results
-        continue-on-error: true
-
-      - name: Send Slack notification
-        if: env.SLACK_WEBHOOK_URL != ''
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          # Determine overall status
-          if [[ "${{ needs.test-odoo-modules.result }}" == "success" && "${{ needs.dependency-analysis.result }}" == "success" ]]; then
-            STATUS="✅ Success"
-            COLOR="good"
-          elif [[ "${{ needs.dependency-analysis.result }}" == "failure" ]]; then
-            STATUS="⚠️ Dependency Cycles Detected"
-            COLOR="warning"
-          else
-            STATUS="❌ Failed"
-            COLOR="danger"
-          fi
-          
-          # Prepare message
-          MESSAGE="Odoo CI/CD Pipeline: $STATUS\n"
-          MESSAGE+="Branch: ${{ github.ref_name }}\n"
-          MESSAGE+="Commit: ${{ github.sha }}\n"
-          MESSAGE+="Author: ${{ github.actor }}\n"
-          
-          if [[ -f "dependency-analysis.json" ]]; then
-            CYCLES=$(cat dependency-analysis.json | jq -r '.cycles_detected // false')
-            if [[ "$CYCLES" == "true" ]]; then
-              MESSAGE+="\n⚠️ Dependency cycles detected - review required"
-            fi
-          fi
-          
-          # Send to Slack
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"$MESSAGE\", \"color\":\"$COLOR\"}" \
-            $SLACK_WEBHOOK_URL
-
-      - name: Send email notification
-        if: env.NOTIFICATION_EMAIL != ''
-        env:
-          NOTIFICATION_EMAIL: ${{ secrets.NOTIFICATION_EMAIL }}
-        run: |
-          # This would require setting up email service (like SendGrid)
-          echo "Email notification would be sent to: $NOTIFICATION_EMAIL"
-          echo "Status: ${{ needs.test-odoo-modules.result }} / ${{ needs.dependency-analysis.result }}"

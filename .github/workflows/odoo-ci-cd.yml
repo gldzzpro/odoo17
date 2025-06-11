@@ -1,122 +1,44 @@
-name: Odoo Multi-Instance CI/CD
+name: Build and Push Docker Image
 
 on:
   push:
     branches:
       - main
-      - 'branch-*'
-  pull_request:
-    branches:
-      - main
-      - 'branch-*'
-
-env:
-  POSTGRES_PASSWORD: postgres_admin
-  POSTGRES_USER: postgres
-  POSTGRES_DB: postgres
-  NEO4J_URI: ${{ secrets.NEO4J_URI }}
-  NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
-  NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+      - 'feature/**'
+      - 'fb/**'   # optional: if you're using fb-branch naming
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
 
 jobs:
-  detect-changes:
+  build-and-push:
     runs-on: ubuntu-latest
-    outputs:
-      instances: ${{ steps.detect.outputs.instances }}
-      base-changed: ${{ steps.filter.outputs.base }}
+
+    permissions:
+      contents: read
+      packages: write  # required to push to GHCR
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect instances and changes
-        id: detect
-        run: |
-          echo "Detecting changed instances..."
-          CHANGED=$(git diff --name-only origin/main...HEAD)
-          echo "$CHANGED"
-
-          INSTANCES=$(echo "$CHANGED" | grep '^addons_instance' | cut -d/ -f1 | sort -u | sed 's/addons_instance//' | jq -R -s -c 'split("\n") | map(select(. != ""))')
-          echo "Detected instances: $INSTANCES"
-          echo "instances=$INSTANCES" >> $GITHUB_OUTPUT
-
-      - name: Detect base changes
-        id: filter
-        uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            base:
-              - 'addons/**'
-              - 'odoo/**'
-              - 'requirements.txt'
-              - 'setup.py'
-
-  generate-config:
-    needs: detect-changes
-    runs-on: ubuntu-latest
-    if: ${{ needs.detect-changes.outputs.instances != '[]' || needs.detect-changes.outputs.base-changed == 'true' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Generate docker-compose config
-        run: |
-          INSTANCES=$(echo '${{ needs.detect-changes.outputs.instances }}' | jq -r '.[]')
-
-          cp .ci-templates/base.yml docker-compose.ci.yml
-          for i in $INSTANCES; do
-            envsubst "${i}" < .ci-templates/odoo-instance.yml >> docker-compose.ci.yml
-          done
-          echo 'networks:\n  odoo_network:\n    driver: bridge' >> docker-compose.ci.yml
-          echo 'volumes:\n  postgres-data:' >> docker-compose.ci.yml
-          for i in $INSTANCES; do
-            echo "  odoo${i}-data:" >> docker-compose.ci.yml
-          done
-
-      - name: Upload configs
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-configs
-          path: docker-compose.ci.yml
-
-  test-odoo-modules:
-    needs: [detect-changes, generate-config]
-    runs-on: ubuntu-latest
-    if: ${{ needs.detect-changes.outputs.instances != '[]' || needs.detect-changes.outputs.base-changed == 'true' }}
-    strategy:
-      matrix:
-        instance: ${{ fromJson(needs.detect-changes.outputs.instances) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download configs
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-configs
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Start Odoo service
-        run: |
-          docker compose -f docker-compose.ci.yml up -d postgres
-          timeout 60 bash -c 'until docker compose -f docker-compose.ci.yml exec -T postgres pg_isready -U postgres; do sleep 2; done'
-          docker compose -f docker-compose.ci.yml up -d odoo${{ matrix.instance }}
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run Odoo module tests
-        run: |
-          INSTANCE=${{ matrix.instance }}
-          MODULES=$(find addons_instance$INSTANCE -name '__manifest__.py' -exec dirname {} \; | xargs -I {} basename {})
-          for m in $MODULES; do
-            echo "Running tests for module $m in instance $INSTANCE"
-            docker compose -f docker-compose.ci.yml exec -T odoo$INSTANCE odoo-bin \
-              --test-enable --stop-after-init --database=odoo_db$INSTANCE --update=$m --log-level=test || echo "Tests failed for $m"
-          done
+      - name: Set commit SHA as tag
+        id: vars
+        run: echo "tag=fb-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      - name: Cleanup
-        if: always()
-        run: |
-          docker compose -f docker-compose.ci.yml down -v
-          docker system prune -f
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.tag }}

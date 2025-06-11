@@ -1,7 +1,7 @@
 name: Build and Push Docker Image
 
 on:
-  push:
+  pull_request:
     branches:
       - main
       - 'branch-*'
@@ -29,9 +29,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set commit SHA as tag
+      - name: Set PR ID as tag
         id: vars
-        run: echo "tag=fb-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        run: echo "tag=fb-pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

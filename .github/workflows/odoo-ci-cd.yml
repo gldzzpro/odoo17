@@ -4,11 +4,8 @@ on:
   push:
     branches:
       - main
-      - 'feature/**'
-      - 'fb/**'   # optional: if you're using fb-branch naming
-    paths-ignore:
-      - '**.md'
-      - '.github/**'
+      - 'branch-*'
+  
 
 jobs:
   build-and-push:

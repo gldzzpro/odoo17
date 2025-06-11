@@ -44,13 +44,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: List GHCR tags for a container image
+
         env:
           GHCR_OWNER: my-org               # <- Change this
           IMAGE_NAME: my-app               # <- Change this
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Fetching tags for ghcr.io/gldzzpro/odoo17"
-          curl -s -H "Authorization: Bearer $GH_TOKEN" \
-               -H "Accept: application/vnd.github.v3+json" \
-               "https://api.github.com/orgs/gldzzpro/packages/container/odoo17/versions" \
-          | jq -r '.[].metadata.container.tags[]' || echo "No tags found or image doesn't exist"
+              # GitHub token
+              TOKEN=$GH_TOKEN
+              IMAGE_PREFIX="ghcr.io/gldzzpro/odoo17"
+              
+              # Get all tags that start with fb-
+              tags=$(curl -s -H "Authorization: Bearer $TOKEN" \
+                          -H "Accept: application/vnd.github.v3+json" \
+                          "https://api.github.com/user/packages/container/odoo17/versions" \
+                    | jq -r '.[].metadata.container.tags[]? | select(startswith("fb-"))')
+              
+              # Run a container for each tag
+              for tag in $tags; do
+                  echo "Running container for tag: $tag"
+                  docker run -d --name "odoo_$tag" "$IMAGE_PREFIX:$tag"
+              done
+
+              sleep 10
+
+              docker ps
+
+              echo "edes edes"

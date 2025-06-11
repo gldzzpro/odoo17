@@ -39,3 +39,18 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.tag }}
+
+  list-ghcr-tags:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List GHCR tags for a container image
+        env:
+          GHCR_OWNER: my-org               # <- Change this
+          IMAGE_NAME: my-app               # <- Change this
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fetching tags for ghcr.io/gldzzpro/odoo17"
+          curl -s -H "Authorization: Bearer $GH_TOKEN" \
+               -H "Accept: application/vnd.github.v3+json" \
+               "https://api.github.com/orgs/gldzzpro/packages/container/odoo17/versions" \
+          | jq -r '.[].metadata.container.tags[]' || echo "No tags found or image doesn't exist"

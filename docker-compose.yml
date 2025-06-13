@@ -28,89 +28,10 @@ services:
       timeout: 5s
       retries: 5
 
-  odoo1:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: -- --db_host=postgres --db_port=5432 --db_user=odoo1 --db_password=odoo1_pass --database=odoo_db1 -i base,softifi_graph_module_dependency --http-interface=0.0.0.0 --proxy-mode
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "8070:8069"
-    environment:
-      - HOST=odoo1
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=odoo1
-      - DB_PASSWORD=odoo1_pass
-      - DB_NAME=odoo_db1
-    volumes:
-      - ./addons_instance1:/mnt/extra-addons:ro
-      - ./odoo1.conf:/etc/odoo/odoo.conf:ro
-      - odoo1-data:/var/lib/odoo
-    networks:
-      - odoo_network
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "2"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-  odoo2:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: -- --db_host=postgres --db_port=5432 --db_user=odoo2 --db_password=odoo2_pass --database=odoo_db2 -i base,softifi_graph_module_dependency --http-interface=0.0.0.0 --proxy-mode
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "8069:8069"
-    environment:
-      - HOST=odoo2
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=odoo2
-      - DB_PASSWORD=odoo2_pass
-      - DB_NAME=odoo_db2
-    volumes:
-      - ./addons_instance2:/mnt/extra-addons:ro
-      - ./odoo2.conf:/etc/odoo/odoo.conf:ro
-      - odoo2-data:/var/lib/odoo
-    networks:
-      - odoo_network
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "2"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
   graphsync:
-    build:
-      context: ./graph_sync
-      dockerfile: Dockerfile.graphsync
+    image: ghcr.io/gldzzpro/graph_sync:latest
     ports:
       - "8000:8000"
-    environment:
-      - CONFIG_PATH=/app/config.yaml
-      - DOCKER_INSTANCES=odoo1:http://odoo1:8069,odoo2:http://odoo2:8069
-      - LOG_LEVEL=DEBUG
-    depends_on:
-      - odoo1
-      - odoo2
     networks:
       - odoo_network
     deploy:
@@ -126,9 +47,7 @@ services:
       start_period: 5s
 
   neo4j_sync:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
+    image: ghcr.io/gldzzpro/neo4j_sync:latest
     ports:
       - "8001:8000"
     environment:
@@ -154,9 +73,7 @@ services:
 
 networks:
   odoo_network:
-    driver: bridge
+    external: true
 
 volumes:
   postgres-data:
-  odoo1-data:
-  odoo2-data:

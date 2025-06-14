@@ -1,5 +1,4 @@
 # Odoo
-bye bye
 [![Build Status](https://runbot.odoo.com/runbot/badge/flat/1/master.svg)](https://runbot.odoo.com/runbot)
 [![Documentation](https://img.shields.io/badge/master-docs-875A7B.svg?style=flat&colorA=8F8F8F)](https://www.odoo.com/documentation/17.0)
 [![Help](https://img.shields.io/badge/master-help-875A7B.svg?style=flat&colorA=8F8F8F)](https://www.odoo.com/forum/help-1)
@@ -30,6 +29,20 @@ from the documentation.
 To learn the software, we recommend the [Odoo eLearning](https://www.odoo.com/slides),
 or [Scale-up, the business game](https://www.odoo.com/page/scale-up-business-game).
 Developers can start with [the developer tutorials](https://www.odoo.com/documentation/17.0/developer/howtos.html).
+
+## Starting this Project
+
+To start this specific Odoo project, follow these steps:
+
+1. **Activate the virtual environment:**
+   ```bash
+   source odoo-venv/bin/activate
+   ```
+
+2. **Run Odoo with the custom module:**
+   ```bash
+   python3 odoo-bin -c odoo.conf -i softifi_graph_module_dependency
+   ```
 
 ## Security
 

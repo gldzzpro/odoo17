@@ -50,9 +50,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Create Docker network
+        run: docker network create -d bridge odoo_network
+      
       - name: Run Postgres container
         run: |
           docker run -d \
+            --network odoo_network \
             --name postgres \
             -e POSTGRES_USER=postgres \
             -e POSTGRES_PASSWORD=postgres_admin \
@@ -99,6 +103,7 @@ jobs:
             echo "Running Odoo container for tag $tag"
             docker run -d \
               --name "odoo_$tag" \
+              --network odoo_network \
               --link postgres:postgres \
               "$IMAGE_PREFIX:$tag" \
               -- \

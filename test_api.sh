@@ -6,7 +6,7 @@
 # /api/graph/* endpoints. 
 #
 # Workflow:
-#   1. Retrieve all modules whose category names contain "Custom" via
+#   1. Retrieve all modules whose category names contain "Tools" via
 #      the category-based JSON‑RPC endpoint with max_depth=0.
 #   2. Extract the module IDs from that response.
 #   3. Test forward and reverse graphs for those modules under various options.
@@ -29,7 +29,7 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}=== Step 1: Fetch modules in categories matching 'Custom' ===${NC}"
+echo -e "${BLUE}=== Step 1: Fetch modules in categories matching 'Tools' ===${NC}"
 # We call the category-based JSON‑RPC with max_depth=0 to get only the module nodes.
 category_response=$(curl -s -X POST "$CATEGORY_RPC" \
   -H "Content-Type: application/json" \
@@ -37,7 +37,7 @@ category_response=$(curl -s -X POST "$CATEGORY_RPC" \
     "jsonrpc": "2.0",
     "method": "call",
     "params": {
-      "category_prefixes": ["Custom"],
+      "category_prefixes": ["Tools"],
       "options": {
         "exact_match": false,
         "include_subcategories": true,
@@ -52,7 +52,7 @@ echo "$category_response" | jq .
 # Extract module IDs from the result.nodes array, safely handling empty arrays
 module_ids=($(echo "$category_response" | jq -r '.result.nodes[] | .id' 2>/dev/null || echo ""))
 if [ -z "${module_ids[*]}" ]; then
-  echo -e "${YELLOW}No modules found in 'Custom' categories. Aborting tests.${NC}"
+  echo -e "${YELLOW}No modules found in 'Tools' categories. Aborting tests.${NC}"
   exit 1
 fi
 
@@ -65,7 +65,7 @@ MODULE_IDS_CSV="[${MODULE_IDS_CSV%,}]"
 
 first_module=${module_ids[0]}
 
-echo -e "${BLUE}=== Step 2: Forward graph for modules in 'Custom' categories ===${NC}"
+echo -e "${BLUE}=== Step 2: Forward graph for modules in 'Tools' categories ===${NC}"
 
 # Test A: Basic forward graph (no options)
 echo -e "${GREEN}Test A: Forward graph (no options)${NC}"
@@ -116,7 +116,7 @@ curl -s -X POST "$MODULE_RPC" \
   }' | jq .
 echo -e "${BLUE}-----------------------------------------------------${NC}"
 
-echo -e "${BLUE}=== Step 3: Reverse graph for modules in 'Custom' categories ===${NC}"
+echo -e "${BLUE}=== Step 3: Reverse graph for modules in 'Tools' categories ===${NC}"
 
 # Test D: Basic reverse graph (no options)
 echo -e "${GREEN}Test D: Reverse graph (no options)${NC}"

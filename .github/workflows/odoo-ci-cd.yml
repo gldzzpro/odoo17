@@ -83,6 +83,7 @@ jobs:
                 | jq -r '.[].metadata.container.tags[]? | select(startswith("fb-"))')
 
           for tag in $tags; do
+            echo "tag: $tag"
             dbname="db_${tag//-/_}"
             dbuser="user_${tag//-/_}"
             dbpass="$DEFAULT_PASS"
@@ -108,7 +109,7 @@ jobs:
               -p 8069:8069 \
               -v ./custom_addons:/mnt/extra-addons:ro \
               -v odoo_$tag-data:/var/lib/odoo \
-              "odoo_$tag" \
+              "$IMAGE_PREFIX:$tag" \
               --db_host=postgres \
               --db_port=5432 \
               --db_user=$dbuser \

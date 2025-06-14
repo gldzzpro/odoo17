@@ -132,6 +132,7 @@ jobs:
         run: |
           echo "Tags are: ${{ steps.lsghcr.outputs.tags }}"
 
+          tags="${{ steps.lsghcr.outputs.tags }}"
           DOCKER_INSTANCES=""
           for tag in $tags; do
             name="odoo_${tag}"

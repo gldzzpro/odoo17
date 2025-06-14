@@ -1,0 +1,9 @@
+[submodule "neo4j_sync"]
+	path = neo4j_sync
+	url = https://github.com/gldzzpro/neo4j_sync.git
+[submodule "graph_module_dependency"]
+	path = graph_module_dependency
+	url = https://github.com/gldzzpro/graph_module_dependency.git
+[submodule "graph_sync"]
+	path = graph_sync
+	url = https://github.com/gldzzpro/graph_sync.git

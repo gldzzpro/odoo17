@@ -68,6 +68,7 @@ jobs:
           sleep 10
 
       - name: List GHCR tags and run containers
+        id: lsghcr
         env:
           GHCR_OWNER: my-org
           IMAGE_NAME: my-app
@@ -81,6 +82,8 @@ jobs:
                       -H "Accept: application/vnd.github.v3+json" \
                       "https://api.github.com/user/packages/container/odoo17/versions" \
                 | jq -r '.[].metadata.container.tags[]? | select(startswith("fb-"))')
+          
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
           for tag in $tags; do
             echo "tag: $tag"
@@ -124,7 +127,36 @@ jobs:
           sleep 10
           docker ps
 
-      - name: Run test script on Odoo containers
+      - name: Get Docker instances
+        id: docker_instances
         run: |
-          chmod +x ./test_api.sh
-          ./test_api.sh
+          echo "Tags are: ${{ steps.lsghcr.outputs.tags }}"
+
+          DOCKER_INSTANCES=""
+          for tag in $tags; do
+            name="odoo_${tag}"
+            url="http://${name}:8069"
+            DOCKER_INSTANCES+="${name}:${url},"
+          done
+
+          # Remove trailing comma
+          DOCKER_INSTANCES="${DOCKER_INSTANCES%,}"
+
+          echo "Final DOCKER_INSTANCES: $DOCKER_INSTANCES"
+
+          # Export for use in later steps
+          echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
+
+      - name: Run Graph-SYNC Project
+        run: |
+            docker run --network odoo_network \
+              -e DOCKER_INSTANCES="$DOCKER_INSTANCES" \
+              ghcr.io/gldzzpro/graph_sync:latest
+            
+
+            sleep 10 
+
+            docker ps
+
+
+          

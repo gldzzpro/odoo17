@@ -153,6 +153,8 @@ jobs:
             docker_instances="${{ steps.docker_instances.outputs.docker_instances }}"
             echo "docker_instances: $docker_instances"
             docker run -d --network odoo_network \
+              --name graph_sync \
+              -p 8000:8000 \
               -e DOCKER_INSTANCES="$docker_instances" \
               ghcr.io/gldzzpro/graph_sync:latest
             

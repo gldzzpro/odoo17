@@ -161,5 +161,24 @@ jobs:
 
             docker ps
 
+      - name: Run Neo4j Sync Project
+        run: |
+            echo "🔄 Starting Neo4j Sync container..."
+            docker run -d \
+              --name neo4j_sync \
+              --network odoo_network \
+              -p 8001:8001 \
+              -e NEO4J_URI="neo4j+s://6e0e193c.databases.neo4j.io" \
+              -e NEO4J_USERNAME="neo4j" \
+              -e NEO4J_PASSWORD="5EFKS7g0FDIbNCSexts91WZJfkufYSKxw6FcJPoZOro" \
+              -e LOG_LEVEL="DEBUG" \
+              ghcr.io/gldzzpro/neo4j_sync:latest
+            
+            echo "Waiting for Neo4j Sync to be ready..."
+            sleep 10
+            
+            echo "✅ Neo4j Sync container started"
+            docker ps
+
 
           

@@ -97,7 +97,7 @@ jobs:
             docker exec -i postgres psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $dbname TO $dbuser;"
 
             echo "Running Odoo container for tag $tag"
-            docker run -d -p 8069:8069 \
+            docker run -d \
               --name "odoo_$tag" \
               --link postgres:postgres \
               "$IMAGE_PREFIX:$tag" \

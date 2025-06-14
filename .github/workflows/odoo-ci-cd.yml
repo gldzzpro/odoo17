@@ -117,5 +117,5 @@ jobs:
 
       - name: Run test script on Odoo containers
         run: |
-          chmod +x graph_module_dependency/test_api.sh
-          ./graph_module_dependency/test_api.sh
+          chmod +x ./test_api.sh
+          ./test_api.sh

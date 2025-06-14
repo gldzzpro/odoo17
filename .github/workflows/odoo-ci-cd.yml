@@ -101,12 +101,14 @@ jobs:
             docker exec -i postgres psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $dbname TO $dbuser;"
 
             echo "Running Odoo container for tag $tag"
+
             docker run -d \
               --name "odoo_$tag" \
               --network odoo_network \
-              --link postgres:postgres \
-              "$IMAGE_PREFIX:$tag" \
-              -- \
+              -p 8069:8069 \
+              -v ./custom_addons:/mnt/extra-addons:ro \
+              -v odoo_$tag-data:/var/lib/odoo \
+              "odoo_$tag" \
               --db_host=postgres \
               --db_port=5432 \
               --db_user=$dbuser \
@@ -115,6 +117,7 @@ jobs:
               -i base,softifi_graph_module_dependency \
               --http-interface=0.0.0.0 \
               --proxy-mode
+
           done
 
           sleep 10

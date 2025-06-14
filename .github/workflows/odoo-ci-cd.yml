@@ -74,47 +74,37 @@ jobs:
                 | jq -r '.[].metadata.container.tags[]? | select(startswith("fb-"))')
 
           for tag in $tags; do
-              dbname="db_${tag//-/_}"
-              dbuser="user_${tag//-/_}"
-              dbpass="$DEFAULT_PASS"
+            dbname="db_${tag//-/_}"
+            dbuser="user_${tag//-/_}"
+            dbpass="$DEFAULT_PASS"
 
-              echo "Creating DB and user in Postgres for tag $tag..."
-              docker exec -i postgres psql -U postgres <<EOF
-          DO
-          \$do\$
-          BEGIN
-            IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '$dbname') THEN
-                CREATE DATABASE $dbname;
-            END IF;
-          END
-          \$do\$;
+            echo "Creating DB and user in Postgres for tag $tag..."
 
-          DO
-          \$do\$
-          BEGIN
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$dbuser') THEN
-                CREATE USER $dbuser WITH PASSWORD '$dbpass';
-                GRANT ALL PRIVILEGES ON DATABASE $dbname TO $dbuser;
-            END IF;
-          END
-          \$do\$;
-          EOF
+            # Create DB if not exists
+            docker exec -i postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$dbname'" | grep -q 1 \
+              || docker exec -i postgres psql -U postgres -c "CREATE DATABASE $dbname;"
 
-                        echo "Running Odoo container for tag $tag"
-                        docker run -d \
-                          --name "odoo_$tag" \
-                          --link postgres:postgres \
-                          "$IMAGE_PREFIX:$tag" \
-                          -- \
-                          --db_host=postgres \
-                          --db_port=5432 \
-                          --db_user=$dbuser \
-                          --db_password=$dbpass \
-                          --database=$dbname \
-                          -i base,softifi_graph_module_dependency \
-                          --http-interface=0.0.0.0 \
-                          --proxy-mode
-                    done
+            # Create user if not exists
+            docker exec -i postgres psql -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$dbuser'" | grep -q 1 \
+              || docker exec -i postgres psql -U postgres -c "CREATE USER $dbuser WITH PASSWORD '$dbpass';"
 
-                    sleep 10
-                    docker ps
+            # Grant privileges
+            docker exec -i postgres psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $dbname TO $dbuser;"
+
+            echo "Running Odoo container for tag $tag"
+            docker run -d \
+              --name "odoo_$tag" \
+              --link postgres:postgres \
+              "$IMAGE_PREFIX:$tag" \
+              -- \
+              --db_host=postgres \
+              --db_port=5432 \
+              --db_user=$dbuser \
+              --db_password=$dbpass \
+              --database=$dbname \
+              -i base,softifi_graph_module_dependency \
+              --http-interface=0.0.0.0 \
+              --proxy-mode
+          done
+          sleep 10
+          docker ps

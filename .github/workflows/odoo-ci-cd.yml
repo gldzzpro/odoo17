@@ -1,7 +1,5 @@
 name: Build and Run Odoo Containers
-
 on:
-  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -135,9 +133,7 @@ jobs:
 
           sleep 10
           docker ps
-          docker logs odoo_fb-pr-
           sleep 10
-          docker logs odoo_fb-pr-
           sleep 10
       - name: Get Docker instances
         id: docker_instances
@@ -159,7 +155,6 @@ jobs:
 
           # Export for use in later steps
           echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
-          docker logs odoo_fb-pr-
          
 
       - name: Log in to GHCR
@@ -255,7 +250,6 @@ jobs:
             echo "Getting logs from containers"
             docker logs graph_sync
             docker logs neo4j_sync
-            docker logs odoo_fb-pr-
             # Final status check
             echo "📋 Final container status:"
             docker ps --filter "network=odoo_network" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

@@ -120,6 +120,10 @@ jobs:
               --database=$dbname \
               -i base,softifi_graph_module_dependency \
               --http-interface=0.0.0.0 \
+              --http-port=8069 \
+              --jsonrpc-port=8080 \
+              --jsonrpc-interface=0.0.0.0 \
+              --jsonrpc=true \
               --proxy-mode
 
           done

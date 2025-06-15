@@ -8,40 +8,40 @@ on:
       - 'branch-*'
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+  # build-and-push:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     packages: write
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Log in to GHCR
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set PR ID as tag
-        id: vars
-        run: echo "tag=fb-pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
+  #     - name: Set PR ID as tag
+  #       id: vars
+  #       run: echo "tag=fb-pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.tag }}
+  #     - name: Build and push Docker image
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: .
+  #         push: true
+  #         tags: ghcr.io/${{ github.repository }}:${{ steps.vars.outputs.tag }}
 
   run-containers:
     runs-on: ubuntu-latest
-    needs: build-and-push
+    # needs: build-and-push
 
     steps:
       - name: Checkout repo
@@ -147,22 +147,32 @@ jobs:
 
           # Export for use in later steps
           echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
-          - name: Debug Odoo Module Installation
-          run: |
-            echo "🔍 Checking Odoo module installation..."
-            
-            # Check if Odoo is responding
-            docker exec odoo_fb-pr- curl -s "http://localhost:8069/web/health" || echo "Odoo health check failed"
-            
-            # Check installed modules via Odoo CLI
-            docker exec odoo_fb-pr- /usr/bin/odoo --list-db
-            
-            # Check if the API endpoint exists
-            docker exec odoo_fb-pr- curl -s -X GET "http://localhost:8069/api/graph/category" -H "Content-Type: application/json" || echo "API endpoint not found"
-            
-            # Check Odoo logs for module installation errors
-            echo "📋 Odoo container logs:"
-            docker logs odoo_fb-pr- | tail -50
+
+      - name: Debug Odoo Module Installation
+        run: |
+          echo "🔍 Checking Odoo module installation..."
+          
+          # Check if Odoo is responding
+          docker exec odoo_fb-pr- curl -s "http://localhost:8069/web/health" || echo "Odoo health check failed"
+          
+          # Check installed modules via Odoo CLI
+          docker exec odoo_fb-pr- /usr/bin/odoo --list-db
+          
+          # Check if the API endpoint exists
+          docker exec odoo_fb-pr- curl -s -X GET "http://localhost:8069/api/graph/category" -H "Content-Type: application/json" || echo "API endpoint not found"
+          
+          # Check Odoo logs for module installation errors
+          echo "📋 Odoo container logs:"
+          docker logs odoo_fb-pr- | tail -50
+          
+          # Check custom addons directory
+          echo "📁 Custom addons directory:"
+          docker exec odoo_fb-pr- ls -la /mnt/extra-addons/
+          
+          # Check if softifi_graph_module_dependency is installed
+          echo "🔧 Checking for graph module dependency:"
+          docker exec odoo_fb-pr- find /mnt/extra-addons/ -name "*graph*" -type d || echo "No graph modules found"
+
       - name: Run Graph-SYNC Project
         run: |
             docker_instances="${{ steps.docker_instances.outputs.docker_instances }}"

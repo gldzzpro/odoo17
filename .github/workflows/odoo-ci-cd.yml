@@ -157,13 +157,64 @@ jobs:
           # Export for use in later steps
           echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
           
-          # Make test_api.sh executable in each Docker container
-          echo "Making test_api.sh executable in each container..."
+          # Copy test_api.sh into each Docker container and make it executable
+          echo "Copying test_api.sh into each container..."
           for tag in $tags; do
             container_name="odoo_${tag}"
+            echo "Copying test_api.sh to $container_name"
+            docker cp ./test_api.sh "$container_name":/test_api.sh || echo "Warning: Could not copy test_api.sh to $container_name"
             echo "Setting executable permissions for test_api.sh in $container_name"
             docker exec "$container_name" chmod +x /test_api.sh || echo "Warning: Could not set permissions in $container_name"
           done
+
+      - name: Test API Connectivity
+        run: |
+          echo "Testing API connectivity to Odoo containers..."
+          tags="${{ steps.lsghcr.outputs.tags }}"
+          
+          for tag in $tags; do
+            container_name="odoo_${tag}"
+            echo "Testing connectivity to $container_name..."
+            
+            # Wait for Odoo to be ready
+            echo "Waiting for Odoo in $container_name to be ready..."
+            for i in {1..30}; do
+              if docker exec "$container_name" curl -s "http://localhost:8069/web/database/selector" >/dev/null 2>&1; then
+                echo "✅ Odoo in $container_name is ready"
+                break
+              fi
+              echo "Waiting for Odoo in $container_name... ($i/30)"
+              sleep 5
+            done
+            
+            # Test basic connectivity from within the container
+            echo "Testing basic API endpoint from within $container_name..."
+            docker exec "$container_name" curl -s "http://localhost:8069/api/graph/category" -H "Content-Type: application/json" -d '{
+              "jsonrpc": "2.0",
+              "method": "call",
+              "params": {
+                "category_prefixes": ["Custom"],
+                "options": {
+                  "exact_match": false,
+                  "include_subcategories": true,
+                  "max_depth": 0
+                }
+              },
+              "id": null
+            }' || echo "Warning: API test failed for $container_name"
+            
+            # Test network connectivity between containers
+             echo "Testing network connectivity from $container_name to other containers..."
+             docker exec "$container_name" curl -s "http://$container_name:8069/web/database/selector" >/dev/null 2>&1 && echo "✅ Network connectivity working for $container_name" || echo "❌ Network connectivity failed for $container_name"
+           done
+           
+           # Run the full test_api.sh script from the first container
+           first_tag=$(echo "$tags" | head -n1)
+           if [ -n "$first_tag" ]; then
+             first_container="odoo_${first_tag}"
+             echo "Running full API test script from $first_container..."
+             docker exec "$first_container" /test_api.sh || echo "Warning: Full API test script failed in $first_container"
+           fi
       
 
       # - name: Log in to GHCR

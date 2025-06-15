@@ -103,17 +103,17 @@ echo -e "${BLUE}-----------------------------------------------------${NC}"
 echo -e "${GREEN}Test C: Forward graph (stop_domains on module ${first_module})${NC}"
 curl -s -X POST "$MODULE_RPC" \
   -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "call",
-    "params": {
-      "module_ids": '"$MODULE_IDS_CSV"',
-      "options": {
-        "stop_domains": [[["id","=",'"${first_module}"']]]
+  -d "{
+    \"jsonrpc\": \"2.0\",
+    \"method\": \"call\",
+    \"params\": {
+      \"module_ids\": $MODULE_IDS_CSV,
+      \"options\": {
+        \"stop_domains\": [[[\"id\",\"=\",${first_module}]]]
       }
     },
-    "id": null
-  }' | jq .
+    \"id\": null
+  }" | jq .
 echo -e "${BLUE}-----------------------------------------------------${NC}"
 
 echo -e "${BLUE}=== Step 3: Reverse graph for modules in 'Custom' categories ===${NC}"

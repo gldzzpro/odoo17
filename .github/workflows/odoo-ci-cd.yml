@@ -120,10 +120,6 @@ jobs:
               --database=$dbname \
               -i base,softifi_graph_module_dependency \
               --http-interface=0.0.0.0 \
-              --http-port=8069 \
-              --jsonrpc-port=8080 \
-              --jsonrpc-interface=0.0.0.0 \
-              --jsonrpc=true \
               --proxy-mode
 
           done
@@ -151,7 +147,22 @@ jobs:
 
           # Export for use in later steps
           echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
-
+          - name: Debug Odoo Module Installation
+          run: |
+            echo "🔍 Checking Odoo module installation..."
+            
+            # Check if Odoo is responding
+            docker exec odoo_fb-pr- curl -s "http://localhost:8069/web/health" || echo "Odoo health check failed"
+            
+            # Check installed modules via Odoo CLI
+            docker exec odoo_fb-pr- /usr/bin/odoo --list-db
+            
+            # Check if the API endpoint exists
+            docker exec odoo_fb-pr- curl -s -X GET "http://localhost:8069/api/graph/category" -H "Content-Type: application/json" || echo "API endpoint not found"
+            
+            # Check Odoo logs for module installation errors
+            echo "📋 Odoo container logs:"
+            docker logs odoo_fb-pr- | tail -50
       - name: Run Graph-SYNC Project
         run: |
             docker_instances="${{ steps.docker_instances.outputs.docker_instances }}"

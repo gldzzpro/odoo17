@@ -167,7 +167,7 @@ jobs:
             docker run -d \
               --name neo4j_sync \
               --network odoo_network \
-              -p 8001:8001 \
+              -p 8001:8000 \
               -e NEO4J_URI="neo4j+s://6e0e193c.databases.neo4j.io" \
               -e NEO4J_USERNAME="neo4j" \
               -e NEO4J_PASSWORD="5EFKS7g0FDIbNCSexts91WZJfkufYSKxw6FcJPoZOro" \
@@ -182,7 +182,7 @@ jobs:
 
             # Docker service URLs (accessible within network)
             GRAPHSYNC_URL="http://graph_sync:8000"
-            NEO4J_SYNC_URL="http://neo4j_sync:8001"
+            NEO4J_SYNC_URL="http://neo4j_sync:8000"
             
             echo "🐳 Testing services in Docker environment..."
             

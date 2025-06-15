@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_graph_module_dependency_manager,graph.module.dependency manager,softifi_graph_module_dependency.model_ir_model,base.group_system,1,1,1,1
+access_graph_model_dependency_manager,graph.model.dependency manager,softifi_graph_module_dependency.model_ir_model,base.group_system,1,1,1,1

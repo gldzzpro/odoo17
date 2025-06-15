@@ -157,12 +157,22 @@ jobs:
           # Export for use in later steps
           echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
           
-          # Copy test_api.sh into each Docker container and make it executable
-          echo "Copying test_api.sh into each container..."
+          # Copy test_api.sh into each Docker container, install jq, and make script executable
+          echo "Preparing containers for API testing..."
           for tag in $tags; do
             container_name="odoo_${tag}"
+            echo "Setting up $container_name for API testing"
+            
+            # Install jq in the container
+            echo "Installing jq in $container_name"
+            docker exec "$container_name" apt-get update -qq || echo "Warning: Could not update package list in $container_name"
+            docker exec "$container_name" apt-get install -y jq curl || echo "Warning: Could not install jq/curl in $container_name"
+            
+            # Copy test script
             echo "Copying test_api.sh to $container_name"
             docker cp ./test_api.sh "$container_name":/test_api.sh || echo "Warning: Could not copy test_api.sh to $container_name"
+            
+            # Make script executable
             echo "Setting executable permissions for test_api.sh in $container_name"
             docker exec "$container_name" chmod +x /test_api.sh || echo "Warning: Could not set permissions in $container_name"
           done

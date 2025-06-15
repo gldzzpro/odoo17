@@ -129,12 +129,13 @@ jobs:
               --http-interface=0.0.0.0 \
               --proxy-mode
 
+            sleep 20
+            docker logs odoo_$tag
           done
 
           sleep 10
           docker ps
-          sleep 10
-          sleep 10
+
       - name: Get Docker instances
         id: docker_instances
         run: |

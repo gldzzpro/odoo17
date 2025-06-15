@@ -9,8 +9,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy custom entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY banks.sh /banks.sh
+RUN chmod +x /banks.sh
 
 # Set working directory
 WORKDIR /mnt/extra-addons
@@ -22,5 +22,4 @@ EXPOSE 8072
 # Switch back to odoo user for security
 USER odoo
 
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["odoo"]
+ENTRYPOINT ["/banks.sh"]

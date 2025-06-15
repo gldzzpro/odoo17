@@ -148,31 +148,42 @@ jobs:
           # Export for use in later steps
           echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
 
+
       - name: Debug Odoo Module Installation
         run: |
-          echo "🔍 Checking Odoo module installation..."
-          
-          # Check if Odoo is responding
-          docker exec odoo_fb-pr- curl -s "http://localhost:8069/web/health" || echo "Odoo health check failed"
-          
-          # Check installed modules via Odoo CLI
-          docker exec odoo_fb-pr- /usr/bin/odoo --list-db
-          
-          # Check if the API endpoint exists
-          docker exec odoo_fb-pr- curl -s -X GET "http://localhost:8069/api/graph/category" -H "Content-Type: application/json" || echo "API endpoint not found"
-          
-          # Check Odoo logs for module installation errors
-          echo "📋 Odoo container logs:"
-          docker logs odoo_fb-pr- | tail -50
-          
-          # Check custom addons directory
-          echo "📁 Custom addons directory:"
-          docker exec odoo_fb-pr- ls -la /mnt/extra-addons/
-          
-          # Check if softifi_graph_module_dependency is installed
-          echo "🔧 Checking for graph module dependency:"
-          docker exec odoo_fb-pr- find /mnt/extra-addons/ -name "*graph*" -type d || echo "No graph modules found"
-
+            echo "🔍 Checking Odoo module installation..."
+            
+            # Set variables
+            MODULE_NAME="softifi_graph_module_dependency"  # Your specific module name
+            CONTAINER_NAME="odoo_fb-pr-"
+            
+            # Function to wait for Odoo to be ready
+            wait_for_odoo() {
+              echo "⏳ Waiting for Odoo to be ready..."
+              for i in {1..15}; do
+                if docker exec $CONTAINER_NAME curl -s "http://localhost:8069/web/health" > /dev/null 2>&1; then
+                  echo "✅ Odoo is responding"
+                  return 0
+                fi
+                echo "Attempt $i/15: Odoo not ready yet, waiting 5 seconds..."
+                sleep 5
+              done
+              echo "❌ Odoo failed to start within timeout"
+              return 1
+            }
+            
+            # Wait for Odoo to be ready (reduced wait time for CI/CD)
+            wait_for_odoo || echo "⚠️ Continuing despite Odoo readiness issues..."
+  
+            
+            # Check Odoo health endpoint
+            echo "🏥 Checking Odoo health..."
+            HEALTH_RESPONSE=$(docker exec $CONTAINER_NAME curl -s "http://localhost:8069/web/health" 2>/dev/null)
+            if [ $? -eq 0 ]; then
+              echo "✅ Odoo health check: $HEALTH_RESPONSE"
+            else
+              echo "❌ Odoo health check failed"
+            fi
       - name: Run Graph-SYNC Project
         run: |
             docker_instances="${{ steps.docker_instances.outputs.docker_instances }}"

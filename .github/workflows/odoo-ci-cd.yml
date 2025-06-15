@@ -1,5 +1,4 @@
 name: Build and Run Odoo Containers
-
 on:
   pull_request:
     branches:

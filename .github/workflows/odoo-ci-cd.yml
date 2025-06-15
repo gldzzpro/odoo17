@@ -1,6 +1,5 @@
 name: Build and Run Odoo Containers
 on:
-  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -11,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
       packages: write
 
     steps:

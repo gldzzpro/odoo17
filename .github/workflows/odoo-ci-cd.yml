@@ -1,7 +1,5 @@
 name: Build and Run Odoo Containers
-
 on:
-  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -41,14 +39,31 @@ jobs:
 
   run-containers:
     runs-on: ubuntu-latest
-    needs: build-and-push
+    # needs: build-and-push
+
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
+        
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+              registry: ghcr.io
+              username: ${{ github.actor }}
+              password: ${{ secrets.GITHUB_TOKEN }}
+        
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Create Docker network
+        run: docker network create -d bridge odoo_network
+      
       - name: Run Postgres container
         run: |
           docker run -d \
+            --network odoo_network \
             --name postgres \
             -e POSTGRES_USER=postgres \
             -e POSTGRES_PASSWORD=postgres_admin \
@@ -60,6 +75,7 @@ jobs:
           sleep 10
 
       - name: List GHCR tags and run containers
+        id: lsghcr
         env:
           GHCR_OWNER: my-org
           IMAGE_NAME: my-app
@@ -73,31 +89,37 @@ jobs:
                       -H "Accept: application/vnd.github.v3+json" \
                       "https://api.github.com/user/packages/container/odoo17/versions" \
                 | jq -r '.[].metadata.container.tags[]? | select(startswith("fb-"))')
+          
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
           for tag in $tags; do
+            echo "tag: $tag"
             dbname="db_${tag//-/_}"
             dbuser="user_${tag//-/_}"
             dbpass="$DEFAULT_PASS"
 
             echo "Creating DB and user in Postgres for tag $tag..."
 
-            # Create DB if not exists
-            docker exec -i postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$dbname'" | grep -q 1 \
-              || docker exec -i postgres psql -U postgres -c "CREATE DATABASE $dbname;"
-
             # Create user if not exists
             docker exec -i postgres psql -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$dbuser'" | grep -q 1 \
-              || docker exec -i postgres psql -U postgres -c "CREATE USER $dbuser WITH PASSWORD '$dbpass';"
+              || docker exec -i postgres psql -U postgres -c "CREATE ROLE $dbuser LOGIN PASSWORD '$dbpass';"
+
+            # Create DB if not exists
+            docker exec -i postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$dbname'" | grep -q 1 \
+              || docker exec -i postgres psql -U postgres -c "CREATE DATABASE $dbname OWNER $dbuser;"
 
             # Grant privileges
             docker exec -i postgres psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $dbname TO $dbuser;"
 
             echo "Running Odoo container for tag $tag"
+
             docker run -d \
               --name "odoo_$tag" \
-              --link postgres:postgres \
+              --network odoo_network \
+              -p 8069:8069 \
+              -v ./custom_addons:/mnt/extra-addons:ro \
+              -v odoo_$tag-data:/var/lib/odoo \
               "$IMAGE_PREFIX:$tag" \
-              -- \
               --db_host=postgres \
               --db_port=5432 \
               --db_user=$dbuser \
@@ -106,6 +128,132 @@ jobs:
               -i base,softifi_graph_module_dependency \
               --http-interface=0.0.0.0 \
               --proxy-mode
+
+            sleep 20
+            docker logs odoo_$tag
           done
+
           sleep 10
           docker ps
+
+      - name: Get Docker instances
+        id: docker_instances
+        run: |
+          echo "Tags are: ${{ steps.lsghcr.outputs.tags }}"
+
+          tags="${{ steps.lsghcr.outputs.tags }}"
+          DOCKER_INSTANCES=""
+          for tag in $tags; do
+            name="odoo_${tag}"
+            url="http://${name}:8069"
+            DOCKER_INSTANCES+="${name}:${url},"
+          done
+
+          # Remove trailing comma
+          DOCKER_INSTANCES="${DOCKER_INSTANCES%,}"
+
+          echo "Final DOCKER_INSTANCES: $DOCKER_INSTANCES"
+
+          # Export for use in later steps
+          echo "docker_instances=$DOCKER_INSTANCES" >> "$GITHUB_OUTPUT"
+         
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Graph-SYNC Project
+        run: |
+            docker_instances="${{ steps.docker_instances.outputs.docker_instances }}"
+            echo "docker_instances: $docker_instances"
+            docker run -d --network odoo_network \
+              --name graph_sync \
+              -p 8000:8000 \
+              -e DOCKER_INSTANCES="$docker_instances" \
+              -e LOG_LEVEL="INFO" \
+              ghcr.io/gldzzpro/graph_sync:latest
+            
+
+            sleep 10 
+
+            docker ps
+
+            echo "🔄 Starting Neo4j Sync container..."
+            docker run -d \
+              --name neo4j_sync \
+              --network odoo_network \
+              -p 8001:8000 \
+              -e NEO4J_URI="neo4j+s://6e0e193c.databases.neo4j.io" \
+              -e NEO4J_USERNAME="neo4j" \
+              -e NEO4J_PASSWORD="5EFKS7g0FDIbNCSexts91WZJfkufYSKxw6FcJPoZOro" \
+              -e LOG_LEVEL="DEBUG" \
+              ghcr.io/gldzzpro/neo4j_sync:latest
+            
+            echo "Waiting for Neo4j Sync to be ready..."
+            sleep 10
+            
+            echo "✅ Neo4j Sync container started"
+            docker ps
+
+            # Docker service URLs (accessible within network)
+            GRAPHSYNC_URL="http://graph_sync:8000"
+            NEO4J_SYNC_URL="http://neo4j_sync:8000"
+            
+            echo "🐳 Testing services in Docker environment..."
+            
+            # Check if services are running
+            echo "🔍 Checking if services are running..."
+            
+            # Wait for GraphSync to be ready
+            echo "Checking GraphSync service..."
+            for i in {1..30}; do
+              if docker exec graph_sync curl -s "$GRAPHSYNC_URL/healthcheck" >/dev/null 2>&1; then
+                echo "✅ GraphSync service is running"
+                break
+              fi
+              echo "Waiting for GraphSync... ($i/30)"
+              sleep 2
+            done
+            
+            # Wait for Neo4j Sync to be ready
+            echo "Checking Neo4j Sync service..."
+            for i in {1..30}; do
+              if docker exec neo4j_sync curl -s "$NEO4J_SYNC_URL/healthcheck" >/dev/null 2>&1; then
+                echo "✅ Neo4j Sync service is running"
+                break
+              fi
+              echo "Waiting for Neo4j Sync... ($i/30)"
+              sleep 2
+            done
+            
+            echo "✅ Both services are running"
+            
+            # Trigger sync operation
+            echo "🔄 Triggering sync operation..."
+            SYNC_RESPONSE=$(docker exec graph_sync curl -s -X POST "$GRAPHSYNC_URL/trigger" \
+              -H "Content-Type: application/json" \
+              -d '{"category_prefixes": ["Custom"], "include_reverse": true, "options": {"exact_match": false, "include_subcategories": true, "max_depth": null, "stop_domains": [], "exclude_domains": []}}')
+            
+            echo "📊 Sync response: $SYNC_RESPONSE"
+            
+            # Send to Neo4j
+            echo "🔄 Sending to Neo4j..."
+            INGEST_PAYLOAD=$(echo "$SYNC_RESPONSE" | jq '{responses: .}')
+            INGEST_RESPONSE=$(docker exec neo4j_sync curl -s -X POST "$NEO4J_SYNC_URL/api/graph/ingest" \
+              -H "Content-Type: application/json" \
+              -d "$INGEST_PAYLOAD")
+            
+            echo "📊 Neo4j response: $INGEST_RESPONSE"
+            echo "✅ Docker test completed successfully!"
+            echo "Getting logs from containers"
+            docker logs graph_sync
+            docker logs neo4j_sync
+            # Final status check
+            echo "📋 Final container status:"
+            docker ps --filter "network=odoo_network" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+
+          

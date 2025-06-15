@@ -1,0 +1,47 @@
+.o_model_graph {
+  height: 100%;
+  padding: 16px;
+}
+
+.model_graph_nav {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.model_graph_nav_list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.model_selected {
+  background-color: #e9ecef;
+  font-weight: bold;
+}
+
+.model_graph_container {
+  width: 100%;
+  background-color: #ffffff;
+}
+
+input[type="color"] {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.card-header h5 {
+  font-size: 1rem;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  margin-bottom : 0;
+}
+
+

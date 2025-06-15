@@ -231,7 +231,9 @@ jobs:
             
             echo "📊 Neo4j response: $INGEST_RESPONSE"
             echo "✅ Docker test completed successfully!"
-            
+            echo "Getting logs from containers"
+            docker logs graph_sync
+            docker logs neo4j_sync
             # Final status check
             echo "📋 Final container status:"
             docker ps --filter "network=odoo_network" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

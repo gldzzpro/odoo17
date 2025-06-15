@@ -156,6 +156,7 @@ jobs:
               --name graph_sync \
               -p 8000:8000 \
               -e DOCKER_INSTANCES="$docker_instances" \
+              -e LOG_LEVEL="INFO" \
               ghcr.io/gldzzpro/graph_sync:latest
             
 

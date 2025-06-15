@@ -179,7 +179,144 @@ jobs:
             echo "Setting executable permissions for test_api.sh in $container_name"
             docker exec "$container_name" chmod +x /test_api.sh || echo "Warning: Could not set permissions in $container_name"
           done
-
+      - name: Debug Odoo Module Installation and Test API
+        run: |
+            echo "🔍 Starting comprehensive Odoo module and API testing..."
+            
+            # Set variables
+            MODULE_NAME="softifi_graph_module_dependency"
+            CONTAINER_NAME="odoo_fb-pr-"
+            
+            # Step 1: Wait for Odoo to be fully ready
+            echo "⏳ Waiting for Odoo to be fully ready..."
+            for i in {1..20}; do
+              if docker exec $CONTAINER_NAME curl -s "http://localhost:8069/web/health" | grep -q "pass"; then
+                echo "✅ Odoo health check passed"
+                break
+              fi
+              echo "Attempt $i/20: Odoo not ready yet, waiting 10 seconds..."
+              sleep 10
+            done
+            
+            # Step 2: Check if database exists and is accessible
+            echo "🗄️ Checking database connectivity..."
+            DB_CHECK=$(docker exec $CONTAINER_NAME psql -h postgres -U user_fb_pr_ -d db_fb_pr_ -c "SELECT 1;" 2>/dev/null | grep -c "1" || echo "0")
+            if [ "$DB_CHECK" = "1" ]; then
+              echo "✅ Database connection successful"
+            else
+              echo "❌ Database connection failed"
+              echo "📋 Checking database logs:"
+              docker logs postgres | tail -20
+            fi
+            
+            # Step 3: Force module installation (this is likely the missing piece)
+            echo "🔧 Force installing module '$MODULE_NAME'..."
+            docker exec $CONTAINER_NAME /usr/bin/odoo \
+              --db_host=postgres \
+              --db_port=5432 \
+              --db_user=user_fb_pr_ \
+              --db_password=odoo_pass \
+              --database=db_fb_pr_ \
+              --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
+              -i $MODULE_NAME \
+              --stop-after-init \
+              --no-http || echo "⚠️ Module installation had issues"
+            
+            # Step 4: Restart Odoo to ensure module is loaded
+            echo "🔄 Restarting Odoo container to load modules..."
+            docker restart $CONTAINER_NAME
+            
+            # Wait for restart
+            sleep 15
+            
+            # Step 5: Verify module is installed in database
+            echo "✅ Checking if module is installed in database..."
+            MODULE_STATE=$(docker exec $CONTAINER_NAME psql -h postgres -U user_fb_pr_ -d db_fb_pr_ -t -c "SELECT state FROM ir_module_module WHERE name='$MODULE_NAME';" 2>/dev/null | xargs)
+            echo "📋 Module '$MODULE_NAME' state: $MODULE_STATE"
+            
+            # Step 6: Check if HTTP controllers are loaded
+            echo "🌐 Checking available HTTP routes..."
+            docker exec $CONTAINER_NAME /usr/bin/odoo \
+              --db_host=postgres \
+              --db_port=5432 \
+              --db_user=user_fb_pr_ \
+              --db_password=odoo_pass \
+              --database=db_fb_pr_ \
+              --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
+              --list-db \
+              --stop-after-init 2>/dev/null | grep -i "route\|controller" || echo "No route info available"
+            
+            # Step 7: Test basic Odoo connectivity first
+            echo "🏥 Testing basic Odoo endpoints..."
+            HEALTH_CHECK=$(docker exec $CONTAINER_NAME curl -s "http://localhost:8069/web/health" 2>/dev/null)
+            echo "Health check response: $HEALTH_CHECK"
+            
+            DB_SELECTOR=$(docker exec $CONTAINER_NAME curl -s "http://localhost:8069/web/database/selector" 2>/dev/null | head -1)
+            echo "Database selector response: $DB_SELECTOR"
+            
+            # Step 8: Test your custom API endpoints
+            echo "🎯 Testing custom API endpoints..."
+            
+            # Test 1: Simple GET request
+            echo "Testing GET /api/graph/category..."
+            API_RESPONSE_1=$(docker exec $CONTAINER_NAME curl -s -w "\nHTTP_CODE:%{http_code}" "http://localhost:8069/api/graph/category" 2>/dev/null)
+            HTTP_CODE_1=$(echo "$API_RESPONSE_1" | grep "HTTP_CODE:" | cut -d: -f2)
+            RESPONSE_BODY_1=$(echo "$API_RESPONSE_1" | grep -v "HTTP_CODE:")
+            echo "HTTP Code: $HTTP_CODE_1"
+            echo "Response: $RESPONSE_BODY_1"
+            
+            # Test 2: POST with JSON-RPC
+            echo "Testing POST /api/graph/category with JSON-RPC..."
+            API_RESPONSE_2=$(docker exec $CONTAINER_NAME curl -s -w "\nHTTP_CODE:%{http_code}" \
+              -X POST "http://localhost:8069/api/graph/category" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "jsonrpc": "2.0",
+                "method": "call",
+                "params": {
+                  "category_prefixes": ["Custom"],
+                  "options": {
+                    "exact_match": false,
+                    "include_subcategories": true,
+                    "max_depth": 0
+                  }
+                },
+                "id": 1
+              }' 2>/dev/null)
+            HTTP_CODE_2=$(echo "$API_RESPONSE_2" | grep "HTTP_CODE:" | cut -d: -f2)
+            RESPONSE_BODY_2=$(echo "$API_RESPONSE_2" | grep -v "HTTP_CODE:")
+            echo "HTTP Code: $HTTP_CODE_2"
+            echo "Response: $RESPONSE_BODY_2"
+            
+            # Step 9: Check Odoo logs for any errors
+            echo "📋 Checking Odoo logs for errors..."
+            docker logs $CONTAINER_NAME 2>&1 | grep -E "(ERROR|Exception|Traceback|$MODULE_NAME)" | tail -20 || echo "No relevant errors found"
+            
+            # Step 10: Check module files
+            echo "📁 Checking module files..."
+            if docker exec $CONTAINER_NAME test -d "/mnt/extra-addons/$MODULE_NAME"; then
+              echo "✅ Module directory exists"
+              docker exec $CONTAINER_NAME ls -la "/mnt/extra-addons/$MODULE_NAME/"
+              
+              # Check for controllers
+              echo "🔍 Looking for controller files..."
+              docker exec $CONTAINER_NAME find "/mnt/extra-addons/$MODULE_NAME" -name "*.py" -exec grep -l "Controller\|@http.route" {} \; || echo "No controller files found"
+            else
+              echo "❌ Module directory not found"
+            fi
+            
+            # Step 11: Final summary
+            echo "📊 TEST SUMMARY:"
+            echo "- Module state in DB: $MODULE_STATE"
+            echo "- API GET response code: $HTTP_CODE_1"
+            echo "- API POST response code: $HTTP_CODE_2"
+            
+            if [ "$HTTP_CODE_1" = "200" ] || [ "$HTTP_CODE_2" = "200" ]; then
+              echo "✅ SUCCESS: At least one API endpoint is working"
+            else
+              echo "❌ FAILURE: API endpoints are not accessible"
+              echo "🔍 This suggests the module is not properly installed or controllers are not loaded"
+            fi
       - name: Test API Connectivity
         run: |
           echo "Testing API connectivity to Odoo containers..."

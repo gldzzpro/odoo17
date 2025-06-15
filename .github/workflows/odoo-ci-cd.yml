@@ -163,10 +163,13 @@ jobs:
             container_name="odoo_${tag}"
             echo "Setting up $container_name for API testing"
             
-            # Install jq in the container
-            echo "Installing jq in $container_name"
-            docker exec "$container_name" apt-get update -qq || echo "Warning: Could not update package list in $container_name"
-            docker exec "$container_name" apt-get install -y jq curl || echo "Warning: Could not install jq/curl in $container_name"
+            # Install curl in the container (if not already available)
+            echo "Ensuring curl is available in $container_name"
+            docker exec "$container_name" which curl || docker exec "$container_name" apt-get update && docker exec "$container_name" apt-get install -y curl || echo "Warning: Could not install curl in $container_name"
+            
+            # Install the custom graph module dependency addon
+            echo "Installing softifi_graph_module_dependency addon in $container_name..."
+            docker exec "$container_name" /usr/bin/odoo -d odoo --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons -i softifi_graph_module_dependency --stop-after-init || echo "Warning: Could not install softifi_graph_module_dependency addon in $container_name"
             
             # Copy test script
             echo "Copying test_api.sh to $container_name"
